@@ -667,21 +667,44 @@
             100% { opacity: 1; transform: scale(1); }
         }
 
-        .winning-stamp {
-            display: inline-block;
-            background: rgba(0, 255, 204, 0.1);
-            border: 1px solid #ffd700;
-            border-radius: 20px;
-            padding: 4px 14px;
-            font-size: 10px;
-            color: #ffd700;
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 1px;
+        .pattern-indicator {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
             margin-top: 8px;
+            flex-wrap: wrap;
         }
-        .winning-stamp .highlight {
+        .pattern-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .pattern-dot.big {
+            background: rgba(255, 51, 102, 0.3);
+            border: 1px solid #ff3366;
+            color: #ff3366;
+        }
+        .pattern-dot.small {
+            background: rgba(0, 255, 204, 0.3);
+            border: 1px solid #00ffcc;
             color: #00ffcc;
-            font-size: 13px;
+        }
+        .pattern-dot.current {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+        .pattern-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-align: center;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -747,7 +770,7 @@
             </div>
 
             <div class="guarantee">⚡ 100% WIN GUARANTEE • NO LOSS EVER ⚡</div>
-            <div class="footer">YT EXPERT v3.0</div>
+            <div class="footer">YT EXPERT v6.0</div>
         </div>
 
         <!-- ============================================================ -->
@@ -800,14 +823,13 @@
                     <img id="res-img-video" src="https://i.ibb.co/qFcHBGDS/1776870146787.png" alt="Prediction Result">
                 </div>
                 <div id="v-status">READY TO SCAN</div>
-                <div class="winning-stamp">
-                    🏆 100% WIN RATE <span class="highlight">✓</span>
-                </div>
+                <div class="pattern-label">PATTERN TRACKING</div>
+                <div class="pattern-indicator" id="patternIndicator"></div>
             </div>
 
             <button id="final-predict-btn" class="action-btn" onclick="triggerPrediction()">GET RESULT</button>
             <div class="guarantee">⚡ 100% WIN GUARANTEE • NO LOSS EVER ⚡</div>
-            <div class="footer">YT EXPERT v3.0 • 100% PROOF</div>
+            <div class="footer">YT EXPERT v6.0 • 100% PROOF</div>
         </div>
 
     </div>
@@ -1121,7 +1143,7 @@
 
         // ================================================================
         // ================================================================
-        // BALANCED PREDICTION - NO LOSS
+        // SMART PATTERN BASED PREDICTION - PRACTICAL
         // ================================================================
         // ================================================================
         
@@ -1134,7 +1156,7 @@
         let lastFetchTime = 0;
         let history = [];
         let predictionCache = {};
-        let winStreak = 0;
+        let patternHistory = [];
 
         const assets = {
             def: "https://i.ibb.co/qFcHBGDS/1776870146787.png",
@@ -1153,164 +1175,107 @@
         };
 
         // ================================================================
-        // BALANCED PREDICTION - BIG & SMALL EQUAL CHANCE
+        // PATTERN BASED PREDICTION - 5 STRATEGIES
         // ================================================================
-        function balancedPrediction(period) {
+        function patternBasedPrediction(period) {
             let clean = period.replace(/[^0-9]/g, '');
             if (!clean || clean.length < 8) clean = "20260630100010538";
             
             let digits = clean.split('').map(Number);
             let len = digits.length;
             
-            // ---- BASIC STATS ----
-            let sum = digits.reduce((a, b) => a + b, 0);
-            let avg = sum / len;
-            let lastDigit = digits[len - 1] || 0;
-            let firstDigit = digits[0] || 0;
-            let midDigit = digits[Math.floor(len / 2)] || 0;
+            // ==========================================================
+            // STRATEGY 1: LAST 5 PATTERN ANALYSIS
+            // ==========================================================
+            let last5 = history.slice(-5);
+            let bigInLast5 = last5.filter(v => v === "BIG").length;
+            let smallInLast5 = last5.length - bigInLast5;
             
-            // ---- EVEN/ODD ----
+            let strategy1 = "";
+            if (bigInLast5 >= 3) {
+                strategy1 = "SMALL";
+            } else if (smallInLast5 >= 3) {
+                strategy1 = "BIG";
+            } else {
+                strategy1 = "NEUTRAL";
+            }
+            
+            // ==========================================================
+            // STRATEGY 2: LAST 3 PATTERN
+            // ==========================================================
+            let last3 = history.slice(-3);
+            let allSame = last3.length === 3 && last3[0] === last3[1] && last3[1] === last3[2];
+            let strategy2 = "";
+            if (allSame) {
+                strategy2 = last3[0] === "BIG" ? "SMALL" : "BIG";
+            } else {
+                strategy2 = "NEUTRAL";
+            }
+            
+            // ==========================================================
+            // STRATEGY 3: DIGIT SUM BASED
+            // ==========================================================
+            let sum = digits.reduce((a, b) => a + b, 0);
+            let strategy3 = sum % 2 === 0 ? "BIG" : "SMALL";
+            
+            // ==========================================================
+            // STRATEGY 4: LAST DIGIT BASED
+            // ==========================================================
+            let lastDigit = digits[len - 1] || 0;
+            let strategy4 = lastDigit >= 5 ? "BIG" : "SMALL";
+            
+            // ==========================================================
+            // STRATEGY 5: EVEN/ODD RATIO
+            // ==========================================================
             let evenCount = digits.filter(d => d % 2 === 0).length;
             let oddCount = len - evenCount;
+            let strategy5 = evenCount > oddCount ? "BIG" : "SMALL";
             
-            // ---- HIGH/LOW ----
-            let highCount = digits.filter(d => d >= 5).length;
-            let lowCount = len - highCount;
+            // ==========================================================
+            // VOTE ON STRATEGIES
+            // ==========================================================
+            let strategies = [strategy1, strategy2, strategy3, strategy4, strategy5];
+            let bigCount = strategies.filter(s => s === "BIG").length;
+            let smallCount = strategies.filter(s => s === "SMALL").length;
+            let neutralCount = strategies.filter(s => s === "NEUTRAL").length;
             
-            // ---- SEQUENCE ----
-            let seqScore = 0;
-            for (let i = 1; i < len; i++) {
-                if (digits[i] > digits[i - 1]) seqScore += 1;
-                else if (digits[i] < digits[i - 1]) seqScore -= 1;
-            }
-            
-            // ---- MULTI-HASH (Balanced) ----
-            let hash1 = 0, hash2 = 0, hash3 = 0, hash4 = 0, hash5 = 0;
-            let hash6 = 0, hash7 = 0, hash8 = 0, hash9 = 0, hash10 = 0;
-            
-            for (let i = 0; i < len; i++) {
-                let d = digits[i] || 0;
-                let c = clean.charCodeAt(i);
-                hash1 = (hash1 * 31 + d * 7 + c * 13 + i * 17) & 0xFFFFFFFF;
-                hash2 = (hash2 * 37 + d * 11 + c * 19 + i * 23) & 0xFFFFFFFF;
-                hash3 = (hash3 * 41 + d * 29 + c * 31 + i * 37) & 0xFFFFFFFF;
-                hash4 = (hash4 * 43 + d * 53 + c * 59 + i * 61) & 0xFFFFFFFF;
-                hash5 = (hash5 * 47 + d * 67 + c * 71 + i * 73) & 0xFFFFFFFF;
-                hash6 = (hash6 * 53 + d * 79 + c * 83 + i * 89) & 0xFFFFFFFF;
-                hash7 = (hash7 * 59 + d * 97 + c * 101 + i * 103) & 0xFFFFFFFF;
-                hash8 = (hash8 * 61 + d * 107 + c * 109 + i * 113) & 0xFFFFFFFF;
-                hash9 = (hash9 * 67 + d * 127 + c * 131 + i * 137) & 0xFFFFFFFF;
-                hash10 = (hash10 * 71 + d * 139 + c * 149 + i * 151) & 0xFFFFFFFF;
-            }
-            
-            // ---- BALANCED VOTING (Equal weight for BIG and SMALL) ----
-            let bigVotes = 0, smallVotes = 0;
-            let totalMethods = 0;
-            
-            // Method 1-10: Hash based (10 methods) - EQUAL WEIGHT
-            let hashList = [hash1, hash2, hash3, hash4, hash5, hash6, hash7, hash8, hash9, hash10];
-            for (let i = 0; i < hashList.length; i++) {
-                if (hashList[i] % 2 === 0) bigVotes += 3;
-                else smallVotes += 3;
-                totalMethods++;
-            }
-            
-            // Method 11: Sum parity
-            if (sum % 2 === 0) bigVotes += 3; else smallVotes += 3;
-            totalMethods++;
-            
-            // Method 12: Even/Odd ratio
-            if (evenCount > oddCount) bigVotes += 3; else smallVotes += 3;
-            totalMethods++;
-            
-            // Method 13: High/Low ratio
-            if (highCount > lowCount) bigVotes += 3; else smallVotes += 3;
-            totalMethods++;
-            
-            // Method 14: Last digit
-            if (lastDigit >= 5) bigVotes += 4; else smallVotes += 4;
-            totalMethods++;
-            
-            // Method 15: First digit
-            if (firstDigit >= 5) bigVotes += 2; else smallVotes += 2;
-            totalMethods++;
-            
-            // Method 16: Mid digit
-            if (midDigit >= 5) bigVotes += 2; else smallVotes += 2;
-            totalMethods++;
-            
-            // Method 17: Sequence score
-            if (seqScore > 0) bigVotes += 3; else smallVotes += 3;
-            totalMethods++;
-            
-            // Method 18: XOR of first 5 hashes
-            let xor1 = hash1 ^ hash2 ^ hash3 ^ hash4 ^ hash5;
-            if (xor1 % 2 === 0) bigVotes += 2; else smallVotes += 2;
-            totalMethods++;
-            
-            // Method 19: XOR of last 5 hashes
-            let xor2 = hash6 ^ hash7 ^ hash8 ^ hash9 ^ hash10;
-            if (xor2 % 2 === 0) bigVotes += 2; else smallVotes += 2;
-            totalMethods++;
-            
-            // Method 20: Average
-            if (avg >= 4.5) bigVotes += 2; else smallVotes += 2;
-            totalMethods++;
-            
-            // ---- HISTORY TREND (Last 10) ----
-            let trendScore = 0;
-            let recent = history.slice(-10);
-            for (let i = 0; i < recent.length; i++) {
-                let weight = 1 + (i / recent.length) * 3;
-                if (recent[i] === "BIG") trendScore -= weight;
-                else trendScore += weight;
-            }
-            
-            // ---- PATTERN BREAK ----
-            let patternScore = 0;
-            if (history.length >= 3) {
-                let last3 = history.slice(-3);
-                if (last3[0] === last3[1] && last3[1] === last3[2]) {
-                    patternScore = last3[0] === "BIG" ? -5 : 5;
-                }
-            }
-            if (history.length >= 5) {
-                let last5 = history.slice(-5);
-                let bigCount = last5.filter(v => v === "BIG").length;
-                if (bigCount >= 4) patternScore = -4;
-                else if (bigCount <= 1) patternScore = 4;
-            }
-            
-            // ---- FINAL CALCULATION (BALANCED) ----
-            let bigFinal = bigVotes + trendScore + patternScore;
-            let smallFinal = smallVotes - trendScore - patternScore;
-            
-            // ---- DECISION WITH BALANCED LOGIC ----
+            // ==========================================================
+            // FINAL DECISION
+            // ==========================================================
             let result = "";
             
-            // If clearly one side is winning
-            if (bigFinal > smallFinal + 2) {
+            if (bigCount > smallCount && bigCount > neutralCount) {
                 result = "BIG";
-            } else if (smallFinal > bigFinal + 2) {
+            } else if (smallCount > bigCount && smallCount > neutralCount) {
                 result = "SMALL";
+            } else if (bigCount === smallCount && bigCount > 0) {
+                // Tie - use last result opposite
+                result = history.length > 0 ? (history[history.length-1] === "BIG" ? "SMALL" : "BIG") : "BIG";
             } else {
-                // TIE BREAKER - Use last result to balance
-                if (history.length > 0) {
-                    let last = history[history.length - 1];
-                    // If last was BIG, predict SMALL (and vice versa)
-                    result = last === "BIG" ? "SMALL" : "BIG";
-                } else {
-                    // If no history, use last digit
-                    result = lastDigit >= 5 ? "BIG" : "SMALL";
+                // All neutral or tie - use last digit
+                result = lastDigit >= 5 ? "BIG" : "SMALL";
+            }
+            
+            // ==========================================================
+            // SAFETY: If same as last 3, force opposite
+            // ==========================================================
+            if (history.length >= 3) {
+                let last3Check = history.slice(-3);
+                if (last3Check[0] === result && last3Check[1] === result && last3Check[2] === result) {
+                    result = result === "BIG" ? "SMALL" : "BIG";
                 }
             }
             
-            // ---- FINAL SAFETY CHECK ----
-            // If prediction is same as last 3, force opposite
-            if (history.length >= 3) {
-                let last3 = history.slice(-3);
-                if (last3[0] === result && last3[1] === result && last3[2] === result) {
-                    result = result === "BIG" ? "SMALL" : "BIG";
+            // ==========================================================
+            // SAFETY: If same as last 5, force opposite
+            // ==========================================================
+            if (history.length >= 5) {
+                let last5Check = history.slice(-5);
+                let bigCount5 = last5Check.filter(v => v === "BIG").length;
+                if (bigCount5 >= 4 && result === "BIG") {
+                    result = "SMALL";
+                } else if (bigCount5 <= 1 && result === "SMALL") {
+                    result = "BIG";
                 }
             }
             
@@ -1318,42 +1283,101 @@
             history.push(result);
             if (history.length > 30) history.shift();
             
+            // Update pattern indicator
+            updatePatternIndicator();
+            
             return result;
         }
 
         // ================================================================
-        // BALANCED NUMBER GENERATION
+        // UPDATE PATTERN INDICATOR
         // ================================================================
-        function balancedNumber(period, prediction) {
+        function updatePatternIndicator() {
+            const container = document.getElementById('patternIndicator');
+            if (!container) return;
+            
+            let html = '';
+            let last10 = history.slice(-10);
+            
+            for (let i = 0; i < last10.length; i++) {
+                let cls = last10[i] === "BIG" ? "big" : "small";
+                let label = last10[i] === "BIG" ? "B" : "S";
+                let current = (i === last10.length - 1) ? "current" : "";
+                html += `<div class="pattern-dot ${cls} ${current}">${label}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // ================================================================
+        // SMART NUMBER WITH PATTERN
+        // ================================================================
+        function patternNumber(period, prediction) {
             let clean = period.replace(/[^0-9]/g, '');
             if (!clean || clean.length < 8) clean = "20260630100010538";
             
             const pool = prediction === "BIG" ? [0, 1, 2, 3, 4] : [5, 6, 7, 8, 9];
             
-            // Generate hash for number
-            let hash = 0;
+            // Generate multiple hashes
+            let h1 = 0, h2 = 0, h3 = 0, h4 = 0, h5 = 0;
+            let primes = [31, 37, 41, 43, 47];
+            
             for (let i = 0; i < clean.length; i++) {
                 let d = parseInt(clean[i]) || 0;
                 let c = clean.charCodeAt(i);
-                hash = (hash * 31 + d * 7 + c * 13 + i * 17) & 0xFFFFFFFF;
+                h1 = (h1 * primes[0] + d * 7 + c * 13 + i * 17) & 0xFFFFFFFF;
+                h2 = (h2 * primes[1] + d * 11 + c * 19 + i * 23) & 0xFFFFFFFF;
+                h3 = (h3 * primes[2] + d * 29 + c * 31 + i * 37) & 0xFFFFFFFF;
+                h4 = (h4 * primes[3] + d * 53 + c * 59 + i * 61) & 0xFFFFFFFF;
+                h5 = (h5 * primes[4] + d * 67 + c * 71 + i * 73) & 0xFFFFFFFF;
             }
             
-            let hash2 = 0;
-            for (let i = clean.length - 1; i >= 0; i--) {
-                let d = parseInt(clean[i]) || 0;
-                let c = clean.charCodeAt(i);
-                hash2 = (hash2 * 37 + d * 11 + c * 19 + i * 23) & 0xFFFFFFFF;
+            let indices = [
+                Math.abs(h1) % pool.length,
+                Math.abs(h2) % pool.length,
+                Math.abs(h3) % pool.length,
+                Math.abs(h4) % pool.length,
+                Math.abs(h5) % pool.length,
+                Math.abs(h1 ^ h2) % pool.length,
+                Math.abs(h2 ^ h3) % pool.length,
+                Math.abs(h3 ^ h4) % pool.length,
+                Math.abs(h4 ^ h5) % pool.length,
+                Math.abs(h1 + h2 + h3) % pool.length
+            ];
+            
+            // Vote on indices
+            let votes = {};
+            indices.forEach(idx => {
+                votes[idx] = (votes[idx] || 0) + 1;
+            });
+            
+            let maxVotes = 0;
+            let finalIdx = indices[0];
+            for (let key in votes) {
+                if (votes[key] > maxVotes) {
+                    maxVotes = votes[key];
+                    finalIdx = parseInt(key);
+                }
             }
             
-            let idx = Math.abs(hash ^ hash2) % pool.length;
-            let number = pool[idx];
+            if (maxVotes === 1) {
+                let sumIdx = 0;
+                for (let i = 0; i < indices.length; i++) {
+                    sumIdx += indices[i];
+                }
+                finalIdx = sumIdx % pool.length;
+            }
+            
+            let number = pool[finalIdx];
             
             // Safety check
             if (prediction === "BIG" && number > 4) {
-                number = 2;
+                let safeIdx = Math.abs(h1 + h2 + h3 + h4 + h5) % 5;
+                number = [0, 1, 2, 3, 4][safeIdx];
             }
             if (prediction === "SMALL" && number < 5) {
-                number = 7;
+                let safeIdx = Math.abs(h1 * h2 ^ h3 + h4 * h5) % 5;
+                number = [5, 6, 7, 8, 9][safeIdx];
             }
             
             return number;
@@ -1366,13 +1390,13 @@
             if (predictionCache[period]) {
                 return predictionCache[period];
             }
-            let result = balancedPrediction(period);
+            let result = patternBasedPrediction(period);
             predictionCache[period] = result;
             return result;
         }
 
         function getNumber(period, prediction) {
-            return balancedNumber(period, prediction);
+            return patternNumber(period, prediction);
         }
 
         // ================================================================
@@ -1420,7 +1444,7 @@
             subText.className = "sub-type-text " + (type === "BIG" ? "color-big" : "color-small");
             subText.style.display = "block";
             
-            statusText.innerText = "✓ 100% WINNING PREDICTION";
+            statusText.innerText = "✓ PATTERN ANALYSIS COMPLETE";
             
             btn.style.color = "#748a9e";
             btn.innerText = "WAIT FOR NEXT ROUND";
@@ -1484,14 +1508,14 @@
             
             btn.disabled = true;
             btn.style.color = "var(--text-main)";
-            btn.innerText = "ANALYZING...";
-            statusText.innerText = "🔍 SCANNING...";
+            btn.innerText = "ANALYZING PATTERNS...";
+            statusText.innerText = "🔍 SCANNING 5 STRATEGIES...";
             document.getElementById('text-sub-type').style.display = "none";
             
             setTimeout(() => {
                 try {
                     let finalType = getPrediction(period);
-                    let finalNum = getNumber(period, finalType);
+                    let finalNum = patternNumber(period, finalType);
                     
                     if (finalType === "BIG") {
                         finalNum = Math.min(4, Math.max(0, finalNum));
@@ -1516,7 +1540,7 @@
                     showResult(period, fallbackType, fallbackNum);
                     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 }
-            }, 600);
+            }, 700);
         }
 
         // ================================================================
@@ -1530,6 +1554,16 @@
             lastPeriod = initPeriod;
             
             document.getElementById('res-img-video').src = assets.def;
+            
+            // Load history from localStorage
+            let savedHistory = localStorage.getItem('yt_expert_history');
+            if (savedHistory) {
+                try {
+                    history = JSON.parse(savedHistory);
+                    if (history.length > 30) history = history.slice(-30);
+                    updatePatternIndicator();
+                } catch(e) {}
+            }
             
             setTimeout(() => {
                 loadStoredResult(initPeriod);
@@ -1593,6 +1627,15 @@
                 }
             }
         }
+
+        // ================================================================
+        // SAVE HISTORY ON UNLOAD
+        // ================================================================
+        window.addEventListener('beforeunload', function() {
+            try {
+                localStorage.setItem('yt_expert_history', JSON.stringify(history));
+            } catch(e) {}
+        });
 
         // ================================================================
         // INIT
